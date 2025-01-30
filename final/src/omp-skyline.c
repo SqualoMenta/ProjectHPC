@@ -138,7 +138,7 @@ int skyline(const points_t *points, int *s) {
         }
 #pragma omp barrier
 
-#pragma omp for schedule(dynamic)
+#pragma omp for
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N && s[i]; j++) {
                 if (s[j] && dominates(&(P[i * D]), &(P[j * D]), D)) {

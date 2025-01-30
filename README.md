@@ -46,9 +46,9 @@ Execution time (s) 41.932570 seriale worst
         s[i] = 1;
     }
 
-#pragma omp parallel for collapse(2) num_threads(1)
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
+#pragma omp parallel for collapse(2)
+    for (long long i = 0; i < N; i++) {
+        for (long long j = 0; j < N; j++) {
             if (s[i]) {
                 if (s[j] && dominates(&(P[i * D]), &(P[j * D]), D)) {
 #pragma omp atomic write
