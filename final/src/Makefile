@@ -65,8 +65,13 @@ cuda: $(EXE_CUDA)
 
 hip: $(EXE_HIP)
 
-%.cu.hip: %.cu
+hipify-perl:
+	hipify-clang --perl
+
+%.cu.hip: %.cu | hipify-perl
 	perl hipify-perl $< > $@
+	
+
 
 $(EXE_HIP): $(HIP_SRC)
 	$(HIPCC) $< -o $@

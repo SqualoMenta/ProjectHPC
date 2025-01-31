@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
     int threads_per_block = 1024;
     int blocks = (points.N + threads_per_block - 1) / threads_per_block;
     init_s<<<blocks, threads_per_block>>>(d_s, points.N);  // clean
-    cudaDeviceSynchronize();
+    cudaCheckError();
 
     dim3 blocks2D(32, 32);
     dim3 grid2D((points.N + 31) / 32, (points.N + 31) / 32);
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
     //                                               points.D);  // not perfect
 
     skyline_kernel_2<<<grid2D, blocks2D>>>(d_P, d_s, points.N, points.D);
-    cudaDeviceSynchronize();
+    cudaCheckError();
 
     int *s = (int *)malloc(points.N * sizeof(int));
     cudaSafeCall(
