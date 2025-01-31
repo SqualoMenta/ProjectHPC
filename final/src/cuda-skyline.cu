@@ -135,13 +135,9 @@ __global__ void skyline_kernel_2(float *P, int *s, int N, int D) {
     long long i = blockIdx.y * blockDim.y + threadIdx.y;
     long long j = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (i >= N || j >= N) return;
-
-    if (s[i] && s[j]) {
         if (dominates(&(P[i * D]), &(P[j * D]), D)) {
             atomicExch(&s[j], 0);
         }
-    }
 }
 
 /**
