@@ -38,6 +38,7 @@
 #endif
 
 #include <assert.h>
+#include <cuda_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -70,7 +71,7 @@ void read_input(points_t *points) {
         exit(EXIT_FAILURE);
     }
     assert(D >= 2);
-    if (NULL == fgets(buf, sizeof(buf), stdin)) { /* ignore rest of the line */
+    if (NULL == fgets(buf, sizeof(buf), stdin)) {
         fprintf(stderr, "FATAL: can not read the first line\n");
         exit(EXIT_FAILURE);
     }
@@ -101,8 +102,15 @@ void free_points(points_t *points) {
     points->N = points->D = -1;
 }
 
+__global__ void init_s(int *s, int N) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < N) {
+        s[i] = 1;
+    }
+}
+
 /* Returns 1 iff |p| dominates |q| */
-int dominates(const float *p, const float *q, int D) {
+__device__ int dominates(const float *p, const float *q, int D) {
     /* The following loops could be merged, but the keep them separated
        for the sake of readability */
     for (int k = 0; k < D; k++) {
@@ -120,31 +128,37 @@ int dominates(const float *p, const float *q, int D) {
 
 /**
  * Compute the skyline of `points`. At the end, `s[i] == 1` iff point
- * `i` belongs to the skyline. The function returns the number `r` of
- * points that belongs to the skyline. The caller is responsible for
+ * `i` belongs to the skyline.The caller is responsible for
  * allocating the array `s` of length at least `points->N`.
  */
-int skyline(const points_t *points, int *s) {
-    const int D = points->D;
-    const int N = points->N;
-    const float *P = points->P;
-    int r = N;
+__global__ void skyline_kernel_2(float *P, int *s, int N, int D) {
+    long long i = blockIdx.y * blockDim.y + threadIdx.y;
+    long long j = blockIdx.x * blockDim.x + threadIdx.x;
 
-    for (int i = 0; i < N; i++) {
-        s[i] = 1;
-    }
+    if (i >= N || j >= N) return;
 
-    for (int i = 0; i < N; i++) {
-        if (s[i]) {
-            for (int j = 0; j < N; j++) {
-                if (s[j] && dominates(&(P[i * D]), &(P[j * D]), D)) {
-                    s[j] = 0;
-                    r--;
-                }
-            }
+    if (s[i] && s[j]) {
+        if (dominates(&(P[i * D]), &(P[j * D]), D)) {
+            atomicExch(&s[j], 0);
         }
     }
-    return r;
+}
+
+/**
+ * Compute the skyline of `points`. At the end, `s[i] == 1` iff point
+ * `i` belongs to the skyline.The caller is responsible for
+ * allocating the array `s` of length at least `points->N`.
+ */
+__global__ void skyline_kernel(float *P, int *s, int N, int D) {
+    long long i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i >= N) return;
+
+    for (int j = 0; j < N && s[i]; j++) {
+        if (dominates(&(P[i * D]), &(P[j * D]), D)) {
+            atomicExch(&s[j], 0);
+        }
+    }
 }
 
 /**
@@ -178,12 +192,42 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    read_input(&points);
-    int *s = (int *)malloc(points.N * sizeof(*s));
-    assert(s);
+    read_input(&points);  // unchanged
+
     const double tstart = hpc_gettime();
-    const int r = skyline(&points, s);
+
+    float *d_P;
+    int *d_s;
+    cudaMalloc(&d_P, points.N * points.D * sizeof(float));
+    cudaMalloc(&d_s, points.N * sizeof(int));
+
+    cudaMemcpy(d_P, points.P, points.N * points.D * sizeof(float),
+               cudaMemcpyHostToDevice);  // copy P on cuda
+
+    int threads_per_block = 1024;
+    int blocks = (points.N + threads_per_block - 1) / threads_per_block;
+    init_s<<<blocks, threads_per_block>>>(d_s, points.N);  // clean
+    cudaDeviceSynchronize();
+
+    dim3 blocks2D(32, 32);
+    dim3 grid2D((points.N + 31) / 32, (points.N + 31) / 32);
+
+    // skyline_kernel<<<blocks, threads_per_block>>>(d_P, d_s, points.N,
+    //                                               points.D);  // not perfect
+
+    skyline_kernel_2<<<grid2D, blocks2D>>>(d_P, d_s, points.N, points.D);
+    cudaDeviceSynchronize();
+
+    int *s = (int *)malloc(points.N * sizeof(int));
+    cudaMemcpy(s, d_s, points.N * sizeof(int), cudaMemcpyDeviceToHost);
+
+    int r = 0;
+    for (int i = 0; i < points.N; i++) {
+        r += s[i];
+    }
+
     const double elapsed = hpc_gettime() - tstart;
+
     print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
@@ -193,5 +237,8 @@ int main(int argc, char *argv[]) {
 
     free_points(&points);
     free(s);
+    cudaFree(d_P);
+    cudaFree(d_s);
+
     return EXIT_SUCCESS;
 }

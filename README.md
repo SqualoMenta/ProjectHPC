@@ -116,3 +116,240 @@ int skyline(const points_t *points, int *s) {
     return r;
 }
 ```
+
+```c
+#if _XOPEN_SOURCE < 600
+#define _XOPEN_SOURCE 600
+#endif
+
+#include <assert.h>
+#include <cuda_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "hpc.h"
+
+typedef struct {
+    float *P; /* coordinates P[i][j] of point i               */
+    int N;    /* Number of points (rows of matrix P)          */
+    int D;    /* Number of dimensions (columns of matrix P)   */
+} points_t;
+
+void read_input(points_t *points) {
+    char buf[1024];
+    int N, D;
+    float *P;
+
+    if (1 != scanf("%d", &D)) {
+        fprintf(stderr, "FATAL: can not read the dimension\n");
+        exit(EXIT_FAILURE);
+    }
+    assert(D >= 2);
+    if (NULL == fgets(buf, sizeof(buf), stdin)) {
+        fprintf(stderr, "FATAL: can not read the first line\n");
+        exit(EXIT_FAILURE);
+    }
+    if (1 != scanf("%d", &N)) {
+        fprintf(stderr, "FATAL: can not read the number of points\n");
+        exit(EXIT_FAILURE);
+    }
+    P = (float *)malloc(D * N * sizeof(*P));
+    assert(P);
+    for (int i = 0; i < N; i++) {
+        for (int k = 0; k < D; k++) {
+            if (1 != scanf("%f", &(P[i * D + k]))) {
+                fprintf(stderr,
+                        "FATAL: failed to get coordinate %d of point %d\n", k,
+                        i);
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+    points->P = P;
+    points->N = N;
+    points->D = D;
+}
+
+void free_points(points_t *points) {
+    free(points->P);
+    points->P = NULL;
+    points->N = points->D = -1;
+}
+
+__global__ void init_s(int *s, int N) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < N) {
+        s[i] = 1;
+    }
+}
+
+__device__ int dominates(const float *p, const float *q, int D) {
+    for (int k = 0; k < D; k++) {
+        if (p[k] < q[k]) {
+            return 0;
+        }
+    }
+    for (int k = 0; k < D; k++) {
+        if (p[k] > q[k]) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+__global__ void skyline_kernel(float *P, int *s, int N, int D) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= N) return;
+
+    for (int j = 0; j < N && s[i]; j++) {
+        if (dominates(&(P[i * D]), &(P[j * D]), D)) {
+            s[j] = 0;
+        }
+    }
+}
+
+void print_skyline(const points_t *points, const int *s, int r) {
+    const int D = points->D;
+    const int N = points->N;
+    const float *P = points->P;
+
+    printf("%d\n", D);
+    printf("%d\n", r);
+    for (int i = 0; i < N; i++) {
+        if (s[i]) {
+            for (int k = 0; k < D; k++) {
+                printf("%f ", P[i * D + k]);
+            }
+            printf("\n");
+        }
+    }
+}
+
+int main(int argc, char *argv[]) {
+    points_t points;
+
+    if (argc != 1) {
+        fprintf(stderr, "Usage: %s < input_file > output_file\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    read_input(&points);  // unchanged
+
+    const double tstart = hpc_gettime();
+
+    float *d_P;
+    int *d_s;
+    cudaMalloc(&d_P, points.N * points.D * sizeof(float));
+    cudaMalloc(&d_s, points.N * sizeof(int));
+
+    cudaMemcpy(d_P, points.P, points.N * points.D * sizeof(float),
+               cudaMemcpyHostToDevice);  // copy P on cuda
+
+    int threads_per_block = 1024;
+    int blocks = (points.N + threads_per_block - 1) / threads_per_block;
+    init_s<<<blocks, threads_per_block>>>(d_s, points.N);  // clean
+    cudaDeviceSynchronize();
+
+    skyline_kernel<<<blocks, threads_per_block>>>(d_P, d_s, points.N,
+                                                  points.D);  // not perfect
+    cudaDeviceSynchronize();
+
+    int *s = (int *)malloc(points.N * sizeof(int));
+    cudaMemcpy(s, d_s, points.N * sizeof(int), cudaMemcpyDeviceToHost);
+
+    int r = 0;
+    for (int i = 0; i < points.N; i++) {
+        r += s[i];
+    }
+
+    const double elapsed = hpc_gettime() - tstart;
+
+    print_skyline(&points, s, r);
+
+    fprintf(stderr, "\n\t%d points\n", points.N);
+    fprintf(stderr, "\t%d dimensions\n", points.D);
+    fprintf(stderr, "\t%d points in skyline\n\n", r);
+    fprintf(stderr, "Execution time (s) %f\n", elapsed);
+
+    free_points(&points);
+    free(s);
+    cudaFree(d_P);
+    cudaFree(d_s);
+
+    return EXIT_SUCCESS;
+}
+``` t test7 4 sec
+
+```c
+__global__ void skyline_kernel(float *P, int *s, int N, int D) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= N) return;
+
+    for (int j = 0; j < N && s[i]; j++) {
+        if (dominates(&(P[i * D]), &(P[j * D]), D)) {
+            atomicExch(&s[j], 0);
+        }
+    }
+}
+
+__global__ void init_s(int *s, int N) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < N) {
+        s[i] = 1;
+    }
+}
+```
+
+```c
+__global__ void skyline_kernel(float *P, int *s, int N, int D) {
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i >= N || j>=N) return;
+
+    if(s[i] && s[j]){
+        if (dominates(&(P[i * D]), &(P[j * D]), D)) {
+            atomicExch(&s[j], 0);
+        }
+    }
+}
+```
+
+```c
+cudaDeviceProp prop;
+cudaGetDeviceProperties(&prop, 0);
+
+printf("Max blocchi per griglia (X): %d\n", prop.maxGridSize[0]);
+printf("Max blocchi per griglia (Y): %d\n", prop.maxGridSize[1]);
+```
+Max blocchi per griglia (X): 2147483647
+Max blocchi per griglia (Y): 65535
+
+```c
+dim3 blocks2D(32, 32);
+dim3 grid2D((points.N + 31) / 32, (points.N + 31) / 32);
+
+skyline_kernel_2<<<grid2D, blocks2D>>>(d_P, d_s, points.N, points.D);
+
+__global__ void skyline_kernel_2(float *P, int *s, int N, int D) {
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i >= N || j >= N) return;
+
+    if (s[i] && s[j]) {
+        if (dominates(&(P[i * D]), &(P[j * D]), D)) {
+            atomicExch(&s[j], 0);
+        }
+    }
+}
+```
+E se N fosse 1024*1024?
+
+il problema deriva dal numero di blocchi: sulle x possiamo mettere piu di 2^20 blocchi quindi N non sara mai abbastanza grande da risultare un problema. Invece sulle y l'inidice massimo che possiamo ottenere e i = 65535 * 32 = 2097120 che e maggiore di 1024*1024. Quindi il problema non sussiste.
+
+Dopo queste ottimizzazioni il test 7 e stato eseguito in 1.6 secondi invece che in 4. 
+
+La riduzione di r è ancora eseguita dalla cpu ma richiede 0.000474 secondi.
+
+Ritornando al kernel precedente invece si poteva fare un ottimizzazione con la memoria locale visto che ibgu thread leggeva i valori di P N volte
