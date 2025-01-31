@@ -352,4 +352,240 @@ Dopo queste ottimizzazioni il test 7 e stato eseguito in 1.6 secondi invece che 
 
 La riduzione di r è ancora eseguita dalla cpu ma richiede 0.000474 secondi.
 
-Ritornando al kernel precedente invece si poteva fare un ottimizzazione con la memoria locale visto che ibgu thread leggeva i valori di P N volte
+
+
+
+
+hipify-clang --perl //genera il file per eseguire hipfy perl
+rimuovere cudaSafeCall e cuda check error, la gestione degli errori di allocazione andrebbe gestita in un altro modo
+perl hipify-perl cuda-skyline.cu > cuda-skyline.cu.hip //non eseguire se non si vogliono testare delle modifiche
+hipcc cuda-skyline.cu.hip -o hip-cuda-skyline
+
+alternativamente si puo semplicemente usare il make
+hipify-clang --perl //genera il file per eseguire hipfy perl
+rimuovere eventuali cudaSafeCall non compatibili con hipify
+make hip
+
+eventuale chmod +x di hip-cuda-skyline
+
+./hip-cuda-skyline < file.in > file.out
+
+Testing HIP:
+
+./hip-cuda-skyline < ../../../datasets/test2-N100000-D4.in > test.out
+
+	100000 points
+	4 dimensions
+	10352 points in skyline
+
+Execution time (s) 0.306539
+
+./hip-cuda-skyline < ../../../datasets/test3-N100000-D10.in > test.out
+
+	100020 points
+	10 dimensions
+	24892 points in skyline
+
+Execution time (s) 0.412410
+
+
+./hip-cuda-skyline < ../../../datasets/test4-N100000-D8.in > test.out
+
+	100009 points
+	8 dimensions
+	17458 points in skyline
+
+Execution time (s) 0.368484
+
+
+
+./hip-cuda-skyline < ../../../datasets/test5-N100000-D20.in > test.out
+
+	100000 points
+	20 dimensions
+	96973 points in skyline
+
+Execution time (s) 0.600079
+
+
+./hip-cuda-skyline < ../../../datasets/test6-N100000-D50.in > test.out
+
+	100100 points
+	50 dimensions
+	100050 points in skyline
+
+Execution time (s) 0.671831
+
+
+./hip-cuda-skyline < ../../../datasets/test7-N100000-D200.in > test.out
+
+	100400 points
+	200 dimensions
+	100200 points in skyline
+
+Execution time (s) 0.651555
+
+
+./hip-cuda-skyline < ../../../datasets/worst-N100000-D10.in > test.out
+
+	100000 points
+	10 dimensions
+	100000 points in skyline
+
+Execution time (s) 0.490648
+
+
+./hip-cuda-skyline < ../../../datasets/test1-N100000-D3.in > test.out
+
+	100000 points
+	3 dimensions
+	26 points in skyline
+
+Execution time (s) 0.272481
+
+Seriale:
+
+./skyline < ../../../datasets/test1-N100000-D3.in > test.out
+
+	100000 points
+	3 dimensions
+	26 points in skyline
+
+Execution time (s) 0.018173
+
+
+./skyline < ../../../datasets/test2-N100000-D4.in > test.out
+
+	100000 points
+	4 dimensions
+	10352 points in skyline
+
+Execution time (s) 1.956307
+
+
+./skyline < ../../../datasets/test3-N100000-D10.in > test.out
+
+	100020 points
+	10 dimensions
+	24892 points in skyline
+
+Execution time (s) 15.071623
+
+
+./skyline < ../../../datasets/test4-N100000-D8.in > test.out
+
+	100009 points
+	8 dimensions
+	17458 points in skyline
+
+Execution time (s) 9.410433
+
+
+./skyline < ../../../datasets/test5-N100000-D20.in > test.out
+
+	100000 points
+	20 dimensions
+	96973 points in skyline
+
+Execution time (s) 53.443936
+
+
+./skyline < ../../../datasets/test6-N100000-D50.in > test.out
+
+	100100 points
+	50 dimensions
+	100050 points in skyline
+
+Execution time (s) 74.180849
+
+
+./skyline < ../../../datasets/test7-N100000-D200.in > test.out
+
+	100400 points
+	200 dimensions
+	100200 points in skyline
+
+Execution time (s) 100.987629
+
+
+./skyline < ../../../datasets/worst-N100000-D10.in > test.out
+
+	100000 points
+	10 dimensions
+	100000 points in skyline
+
+Execution time (s) 42.652728
+
+
+Open MP:
+
+./omp-skyline < ../../../datasets/test1-N100000-D3.in > test.out
+
+	100000 points
+	3 dimensions
+	26 points in skyline
+
+Execution time (s) 0.003035
+
+
+./omp-skyline < ../../../datasets/test2-N100000-D4.in > test.out
+
+	100000 points
+	4 dimensions
+	10352 points in skyline
+
+Execution time (s) 0.262431
+
+
+./omp-skyline < ../../../datasets/test3-N100000-D10.in > test.out
+
+	100020 points
+	10 dimensions
+	24892 points in skyline
+
+Execution time (s) 1.775200
+
+
+./omp-skyline < ../../../datasets/test4-N100000-D8.in > test.out
+
+	100009 points
+	8 dimensions
+	17458 points in skyline
+
+Execution time (s) 1.200517
+
+
+./omp-skyline < ../../../datasets/test5-N100000-D20.in > test.out
+
+	100000 points
+	20 dimensions
+	96973 points in skyline
+
+Execution time (s) 6.584494
+
+
+./omp-skyline < ../../../datasets/test6-N100000-D50.in > test.out
+
+	100100 points
+	50 dimensions
+	100050 points in skyline
+
+Execution time (s) 9.693624
+
+
+./omp-skyline < ../../../datasets/test7-N100000-D200.in > test.out
+
+	100400 points
+	200 dimensions
+	100200 points in skyline
+
+Execution time (s) 13.471212
+
+
+./omp-skyline < ../../../datasets/worst-N100000-D10.in > test.out
+
+	100000 points
+	10 dimensions
+	100000 points in skyline
+
+Execution time (s) 5.323223
