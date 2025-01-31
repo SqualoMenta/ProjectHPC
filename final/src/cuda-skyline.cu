@@ -198,11 +198,11 @@ int main(int argc, char *argv[]) {
 
     float *d_P;
     int *d_s;
-    cudaMalloc(&d_P, points.N * points.D * sizeof(float));
-    cudaMalloc(&d_s, points.N * sizeof(int));
+    cudaSafeCall(cudaMalloc(&d_P, points.N * points.D * sizeof(float)));
+    cudaSafeCall(cudaMalloc(&d_s, points.N * sizeof(int)));
 
-    cudaMemcpy(d_P, points.P, points.N * points.D * sizeof(float),
-               cudaMemcpyHostToDevice);  // copy P on cuda
+    cudaSafeCall(cudaMemcpy(d_P, points.P, points.N * points.D * sizeof(float),
+                            cudaMemcpyHostToDevice));  // copy P on cuda
 
     int threads_per_block = 1024;
     int blocks = (points.N + threads_per_block - 1) / threads_per_block;
@@ -219,7 +219,8 @@ int main(int argc, char *argv[]) {
     cudaDeviceSynchronize();
 
     int *s = (int *)malloc(points.N * sizeof(int));
-    cudaMemcpy(s, d_s, points.N * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaSafeCall(
+        cudaMemcpy(s, d_s, points.N * sizeof(int), cudaMemcpyDeviceToHost));
 
     int r = 0;
     for (int i = 0; i < points.N; i++) {
@@ -237,8 +238,8 @@ int main(int argc, char *argv[]) {
 
     free_points(&points);
     free(s);
-    cudaFree(d_P);
-    cudaFree(d_s);
+    cudaSafeCall(cudaFree(d_P));
+    cudaSafeCall(cudaFree(d_s));
 
     return EXIT_SUCCESS;
 }
