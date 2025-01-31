@@ -132,12 +132,12 @@ __device__ int dominates(const float *p, const float *q, int D) {
  * allocating the array `s` of length at least `points->N`.
  */
 __global__ void skyline_kernel_2(float *P, int *s, int N, int D) {
-    long long i = blockIdx.y * blockDim.y + threadIdx.y;
-    long long j = blockIdx.x * blockDim.x + threadIdx.x;
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
 
-        if (dominates(&(P[i * D]), &(P[j * D]), D)) {
-            atomicExch(&s[j], 0);
-        }
+    if (dominates(&(P[i * D]), &(P[j * D]), D)) {
+        atomicExch(&s[j], 0);
+    }
 }
 
 /**
@@ -190,6 +190,9 @@ int main(int argc, char *argv[]) {
 
     read_input(&points);  // unchanged
 
+    int *s = (int *)malloc(points.N * sizeof(int));
+    assert(s);
+
     const double tstart = hpc_gettime();
 
     float *d_P;
@@ -214,7 +217,6 @@ int main(int argc, char *argv[]) {
     skyline_kernel_2<<<grid2D, blocks2D>>>(d_P, d_s, points.N, points.D);
     cudaCheckError();
 
-    int *s = (int *)malloc(points.N * sizeof(int));
     cudaSafeCall(
         cudaMemcpy(s, d_s, points.N * sizeof(int), cudaMemcpyDeviceToHost));
 
