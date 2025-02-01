@@ -370,78 +370,6 @@ eventuale chmod +x di hip-cuda-skyline
 
 ./hip-cuda-skyline < file.in > file.out
 
-Testing HIP:
-
-./hip-cuda-skyline < ../../../datasets/test2-N100000-D4.in > test.out
-
-	100000 points
-	4 dimensions
-	10352 points in skyline
-
-Execution time (s) 0.306539
-
-./hip-cuda-skyline < ../../../datasets/test3-N100000-D10.in > test.out
-
-	100020 points
-	10 dimensions
-	24892 points in skyline
-
-Execution time (s) 0.412410
-
-
-./hip-cuda-skyline < ../../../datasets/test4-N100000-D8.in > test.out
-
-	100009 points
-	8 dimensions
-	17458 points in skyline
-
-Execution time (s) 0.368484
-
-
-
-./hip-cuda-skyline < ../../../datasets/test5-N100000-D20.in > test.out
-
-	100000 points
-	20 dimensions
-	96973 points in skyline
-
-Execution time (s) 0.600079
-
-
-./hip-cuda-skyline < ../../../datasets/test6-N100000-D50.in > test.out
-
-	100100 points
-	50 dimensions
-	100050 points in skyline
-
-Execution time (s) 0.671831
-
-
-./hip-cuda-skyline < ../../../datasets/test7-N100000-D200.in > test.out
-
-	100400 points
-	200 dimensions
-	100200 points in skyline
-
-Execution time (s) 0.651555
-
-
-./hip-cuda-skyline < ../../../datasets/worst-N100000-D10.in > test.out
-
-	100000 points
-	10 dimensions
-	100000 points in skyline
-
-Execution time (s) 0.490648
-
-
-./hip-cuda-skyline < ../../../datasets/test1-N100000-D3.in > test.out
-
-	100000 points
-	3 dimensions
-	26 points in skyline
-
-Execution time (s) 0.272481
 
 Seriale:
 
@@ -589,3 +517,111 @@ Execution time (s) 13.471212
 	100000 points in skyline
 
 Execution time (s) 5.323223
+
+
+Testing HIP:
+
+./hip-cuda-skyline < ../../../datasets/test1-N100000-D3.in > test.out
+
+	100000 points
+	3 dimensions
+	26 points in skyline
+
+Execution time (s) 0.400246
+
+
+./hip-cuda-skyline < ../../../datasets/test2-N100000-D4.in > test.out
+
+	100000 points
+	4 dimensions
+	10352 points in skyline
+
+Execution time (s) 0.403530
+
+
+./hip-cuda-skyline < ../../../datasets/test3-N100000-D10.in > test.out
+
+	100020 points
+	10 dimensions
+	24892 points in skyline
+
+Execution time (s) 0.487833
+
+
+./hip-cuda-skyline < ../../../datasets/test4-N100000-D8.in > test.out
+
+	100009 points
+	8 dimensions
+	17458 points in skyline
+
+Execution time (s) 0.463099
+
+
+./hip-cuda-skyline < ../../../datasets/test5-N100000-D20.in > test.out
+
+	100000 points
+	20 dimensions
+	96973 points in skyline
+
+Execution time (s) 0.495992
+
+
+./hip-cuda-skyline < ../../../datasets/test6-N100000-D50.in > test.out
+
+	100100 points
+	50 dimensions
+	100050 points in skyline
+
+Execution time (s) 0.569414
+
+
+./hip-cuda-skyline < ../../../datasets/test7-N100000-D200.in > test.out
+
+	100400 points
+	200 dimensions
+	100200 points in skyline
+
+Execution time (s) 0.545724
+
+
+./hip-cuda-skyline < ../../../datasets/worst-N100000-D10.in > test.out
+
+	100000 points
+	10 dimensions
+	100000 points in skyline
+
+Execution time (s) 0.402735
+
+
+Strong staling efficiency 1 vs 6 threads
+
+serial
+
+./omp-skyline < ../../../datasets/worst-N100000-D10.in > test.out
+
+	100000 points
+	10 dimensions
+	100000 points in skyline
+
+Execution time (s) 42.086263
+
+6 cores
+
+./omp-skyline < ../../../datasets/worst-N100000-D10.in > test.out
+
+	100000 points
+	10 dimensions
+	100000 points in skyline
+
+Execution time (s) 7.457413
+
+Weak scaling efficiency
+
+./omp-skyline < ../../worst-N244949-D10.in > test.out
+
+	244949 points
+	10 dimensions
+	244949 points in skyline
+
+Execution time (s) 46.312181
+

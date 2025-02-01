@@ -130,7 +130,7 @@ int skyline(const points_t *points, int *s) {
     const float *P = points->P; /* coordinates P[i][j] of point i */
     int r = 0;
 
-#pragma omp parallel
+#pragma omp parallel num_threads(6)
     {
 #pragma omp for
         for (int i = 0; i < N; i++) {
