@@ -99,7 +99,7 @@ inline void __cudaSafeCall( cudaError err, const char *file, const int line )
 
 inline void __cudaCheckError( const char *file, const int line )
 {
-#ifndef NO_CUDA_CHECK_ERROR
+    // the cudaDeviceSynchronize() is needed in the final code, so this error must be checked
     cudaError err = cudaGetLastError();
     if ( cudaSuccess != err ) {
         fprintf( stderr, "cudaCheckError() failed at %s:%i : %s\n",
@@ -115,7 +115,6 @@ inline void __cudaCheckError( const char *file, const int line )
                  file, line, cudaGetErrorString( err ) );
         abort();
     }
-#endif
 }
 
 #endif
@@ -139,7 +138,6 @@ inline void __cudaSafeCall(hipError_t err, const char *file, const int line) {
 }
 
 inline void __cudaCheckError(const char *file, const int line) {
-#ifndef NO_CUDA_CHECK_ERROR
     hipError_t err = hipGetLastError();
     if (hipSuccess != err) {
         fprintf(stderr, "cudaCheckError() failed at %s:%i : %s\n", file, line,
@@ -155,7 +153,6 @@ inline void __cudaCheckError(const char *file, const int line) {
                 file, line, hipGetErrorString(err));
         abort();
     }
-#endif
 }
 
 #endif

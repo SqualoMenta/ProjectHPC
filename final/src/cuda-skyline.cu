@@ -135,6 +135,8 @@ __global__ void skyline_kernel_2(float *P, int *s, int N, int D) {
     int i = blockIdx.y * blockDim.y + threadIdx.y;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
 
+    if(i >= N || j >= N) return;
+
     if (dominates(&(P[i * D]), &(P[j * D]), D)) {
         atomicExch(&s[j], 0);
     }
@@ -205,14 +207,14 @@ int main(int argc, char *argv[]) {
 
     int threads_per_block = 1024;
     int blocks = (points.N + threads_per_block - 1) / threads_per_block;
-    init_s<<<blocks, threads_per_block>>>(d_s, points.N);  // clean
+    init_s<<<blocks, threads_per_block>>>(d_s, points.N);
     cudaCheckError();
 
     dim3 blocks2D(32, 32);
     dim3 grid2D((points.N + 31) / 32, (points.N + 31) / 32);
 
     // skyline_kernel<<<blocks, threads_per_block>>>(d_P, d_s, points.N,
-    //                                               points.D);  // not perfect
+    //                                               points.D);
 
     skyline_kernel_2<<<grid2D, blocks2D>>>(d_P, d_s, points.N, points.D);
     cudaCheckError();

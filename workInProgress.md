@@ -278,7 +278,8 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS;
 }
-``` t test7 4 sec
+``` 
+t test7 4 sec
 
 ```c
 __global__ void skyline_kernel(float *P, int *s, int N, int D) {
@@ -625,3 +626,4 @@ Weak scaling efficiency
 
 Execution time (s) 46.312181
 
+$$ Speedup = 5,64 $$
